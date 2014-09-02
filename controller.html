@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="">
+<title>Scanner Controller</title>
+<link href="/css/bootstrap.min.css" rel="stylesheet">
+<style>
+	/* Move down content because we have a fixed navbar that is 50px tall */
+	body {
+		font-family: 'Helvetica', 'Arial', sans-serif;
+		font-weight: 300;
+		padding-top: 50px;
+		padding-bottom: 20px;
+		background-color: #444;
+		color:#f1f1f1;
+	}
+	footer {clear:both;margin-top:12px;padding:10px;border-top:1px solid #777;}
+	p, li	{
+		font-size:16px;
+		line-height: 1.4em;
+		padding-top: 1.0em;
+	}
+	a {text-decoration: underline;}
+	.navbar a	{text-decoration: none;}
+	.navbar-inverse, .navbar-inverse .navbar-brand {background-color:#0b61a4;font-size:28px;color: #f1f1f1;}
+	.navbar-inverse .navbar-nav>.active>a, .navbar-inverse .navbar-nav>.active>a:hover, .navbar-inverse .navbar-nav>.active>a:focus {background-color:#6280B6;}
+	#display	{
+		position: fixed;
+		top: 50;
+		right: 0;
+		left: 0;
+		height:145px;overflow:hidden;
+		background-color:#333;
+		color:#aaccf1;
+		border-bottom:2px solid #222;
+		padding:0px 4px;
+	}
+	#keypad	{padding-top:145px;}
+	#keypad .keys {margin:5px auto;border-top:1px solid #777;}
+	#keypad .keys td {padding:5px;}
+    #keypad .key {width:70px;}
+    #setup	{padding-top:15px;}
+    .well	{color:#222;}
+</style>
+</head>
+<body>
+
+	<div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+		<div class="container">
+			<div class="navbar-header">
+		        <a class="navbar-brand" href="/">Scanner Monitor</a>
+			</div>
+		</div>
+	</div>
+
+	<div class="container">
+		<div id="setup" class="col-sm-offset-2 col-sm-8" style="display:none;">
+        	<form action="" class="well form-horizontal" role="form">
+        		<div class="form-group">
+		            <label class="col-sm-4 control-label" for="host">Hostname or IP Address:</label> 
+		            <div class="col-sm-8"><input type="text" id="host" name="host" value=""/></div> 
+		        </div>
+		        <div class="form-group">
+		            <label class="col-sm-4 control-label" for="port">Port Number:</label> 
+		            <div class="col-sm-8"><input type="number" id="port" name="port" value="" maxlength="5" /></div> 
+		        </div>
+		        <div class="text-right">
+	                <button id="btnConnect" type="button" class="btn btn-success">Connect</button>
+	            </div>
+        	</form>
+        </div>
+        
+        <div id="display">
+        	<h3 id="system">System</h3>
+        	<h3 id="department">Department</h3>
+        	<h3 id="channel">Channel</h3>
+        </div>
+        <div id="keypad">
+        	<table class="keys">
+        		<tr>
+        			<td><button id="btnOne" type="button" class="key btn btn-md btn-primary">1</button></td>
+	   				<td><button id="btnTwo" type="button" class="key btn btn-md btn-primary">2</button></td>
+	   				<td><button id="btnThree" type="button" class="key btn btn-md btn-primary">3</button></td>
+        		</tr>
+        		<tr>
+        			<td><button id="btnFour" type="button" class="key btn btn-md btn-primary">4</button></td>
+	   				<td><button id="btnFive" type="button" class="key btn btn-md btn-primary">5</button></td>
+	   				<td><button id="btnSix" type="button" class="key btn btn-md btn-primary">6</button></td>
+        		</tr>
+        		<tr>
+        			<td><button id="btnSeven" type="button" class="key btn btn-md btn-primary">7</button></td>
+	   				<td><button id="btnEight" type="button" class="key btn btn-md btn-primary">8</button></td>
+	   				<td><button id="btnNine" type="button" class="key btn btn-md btn-primary">9</button></td>
+	   				<td>&gt;</td>
+        		</tr>
+        		<tr>
+        			<td><button id="btnDot" type="button" class="key btn btn-md btn-primary">./No</button></td>
+	   				<td><button id="btnZero" type="button" class="key btn btn-md btn-primary">0</button></td>
+	   				<td><button id="btnEnter" type="button" class="key btn btn-md btn-primary">E/Yes</button></td>
+        		</tr>
+        		<tr>
+        			<td><button id="btnSystem" type="button" class="key btn btn-md btn-default">System</button></td>
+	   				<td><button id="btnDepartment" type="button" class="key btn btn-md btn-default">Dept</button></td>
+	   				<td><button id="btnChannel" type="button" class="key btn btn-md btn-default">Chan</button></td>
+        		</tr>
+        		<tr>
+        			<td><button id="btnScan" type="button" class="key btn btn-md btn-default">Scan</button></td>
+        			<td><button id="btnAvoid" type="button" class="key btn btn-md btn-default">Avoid</button></td>
+        			<td><button id="btnLight" type="button" class="key btn btn-md btn-default">Light</button></td>
+        		</tr>
+        	</table>
+        </div>
+        
+         <footer>
+             &copy; 2014 ScannerMonitor.com
+             <div class="pull-right">
+             	Created by <a href="http://www.tvstats.com/about">Jeff Deskins</a>
+             </div>
+         </footer>
+	</div>
+	<!-- /container -->
+
+	<script src="/socket.io/socket.io.js"></script>
+	<script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+	
+<script>
+	var socket = io.connect("http://nodejs-deskins.rhcloud.com:8000");
+	var channel = 'test';	//TODO: define secure channel by userid
+  
+  	console.log('Create or join room: ' + channel);
+	socket.emit('create or join', channel);
+  
+	  $('form').submit(function(){
+		  var message = { 
+					channel: channel, 
+					text: $('#m').val() 
+					};
+	    socket.emit('message', message);
+	    $('#m').val('');
+	    return false;
+	  });
+	  
+	  socket.on('message', function(msg){
+	    $('#messages').append($('<li>').text(msg.text));
+	  });
+	  socket.on('join', function(msg){
+	    $('#messages').append($('<li>').text("Someone joined room: " + msg));
+	  });
+	  socket.on('created', function(msg){
+	    $('#messages').append($('<li>').text("Room created: " + msg));
+	  });
+	  socket.on('full', function(msg){
+	    $('#messages').append($('<li>').text("Channel (" + msg + ") has max number of connections"));
+	  });
+	  socket.on('display', function(msg){
+		  console.log("In display: " + msg.text);
+		var data = JSON.parse(msg.text);
+		//var message = '{"system": "Nashville", "department": "Fire", "channel": "B2"}';
+		//var data = JSON.parse(message);
+	  	//$('#messages').append($('<li>').text("System: " + data.system + "; Department: " + data.department + "; Channel: " + data.channel + ";"));
+	  	
+	  	$('#system').html(data.system);
+	  	$('#department').html(data.department);
+	  	$('#channel').html(data.channel);
+	  	
+	  });
+	  
+	  
+
+	  $(document).ready(function() {
+	  	
+	  	var lastCommandSent;
+	  	var mutedState = false;
+	  	var closeCallMode = false;
+	  	var scanMode = false;
+	  	var isMonitoring = false;
+	  	var timer;
+	  	var host = 'localhost';
+	  	var port = '3000';
+	  	
+	  	/* var appUrl = 'http://' + host + ':' + port + '/';
+	  	
+	  	
+	  	var startMonitoring = function(){
+	  		timer = setInterval(function(){getStatus();}, 2000);
+	  	};
+
+	  	var stopMonitoring = function(){
+	  		if(timer){
+	  			clearTimeout(timer);
+	  		}
+	  		if(isMonitoring){
+	  			isMonitoring = false;
+	  		}
+	  	};
+	  	
+	  	var getStatus = function() {
+	  		$.getJSON(appUrl, function( data ) {
+	  			console.log("received data = " + data);
+	  		});
+	  	}; */
+	  	
+	  	var sendCommand = function(str) {
+	  		console.log("Sending " + str);
+	  		
+	  		var message = { 
+					channel: channel, 
+					text: str 
+					};
+	    	socket.emit('command', message);
+	    
+	  		lastCommandSent = str;
+	  	};
+	  	
+	  	var getChecksum = function(str){
+	  		var strLength = str.length;
+	  		var sum = 0;
+	  		for (var i = 0; i < strLength; i++) {
+	  			sum = sum + str.charCodeAt(i);
+	  		}
+	  		return sum;
+	  	};
+	  	
+	  	var buildHP1Command = function(str){
+	  		var baseCmd = "RMT\t" + str + "\t";
+	  		var command = baseCmd + getChecksum(baseCmd) + "\r";
+	  		return command;
+	  	};
+	  	
+	  	var doScanMode = function(){
+	  		sendCommand('scan');
+	  		closeCallMode = false;
+	  		scanMode = true;
+	  		$('#btnScan').removeClass("btn-primary");
+	  		$('#btnScan').addClass("btn-success");
+	  		$('#btnCloseCall').removeClass("btn-success");
+	  		$('#btnCloseCall').addClass("btn-primary");
+	  	};
+
+	  	var doCloseCallMode = function(){
+	  		sendCommand('closeCall');
+	  		closeCallMode = true;
+	  		scanMode = false;
+	  		$('#btnScan').removeClass("btn-success");
+	  		$('#btnScan').addClass("btn-primary");
+	  		$('#btnCloseCall').removeClass("btn-primary");
+	  		$('#btnCloseCall').addClass("btn-success");
+	  	};
+	  	
+	  	/*
+	  	var validated = function(host, port) {
+	  		if (host != "" && port != "") {
+	  			return true;
+	  		} else {
+	  			return false;
+	  		}
+	  	};
+	  	
+	  	 $('#btnConnect').click(function(){
+	  		if (validated($('#host').val(), $('#port').val())) {
+	  			appUrl = 'http://' + $('#host').val() + ':' + $('#port').val() + '/';
+	  			console.log("Set url to " + appUrl);
+	  			getStatus();
+	  		} else {
+	  			alert("There was an issue trying to connect.");
+	  		}
+	      	
+	      });
+	     */  
+	  	
+	  	// KEYPAD BUTTONS
+	      
+	      $('#btnOne').click(function(){
+	      	sendCommand('one');
+	      });
+	      
+	      $('#btnTwo').click(function(){
+	      	sendCommand('two');
+	      });
+	      
+	      $('#btnThree').click(function(){
+	      	sendCommand('three');
+	      });
+	      
+	      $('#btnFour').click(function(){
+	      	sendCommand('four');
+	      });
+	      
+	      $('#btnFive').click(function(){
+	      	sendCommand('five');
+	      });
+	      
+	      $('#btnSix').click(function(){
+	      	sendCommand('six');
+	      });
+	      
+	      $('#btnSeven').click(function(){
+	      	sendCommand('seven');
+	      });
+	      
+	      $('#btnEight').click(function(){
+	      	sendCommand('eight');
+	      });
+	      
+	      $('#btnNine').click(function(){
+	      	sendCommand('nine');
+	      });
+	      
+	      $('#btnZero').click(function(){
+	      	sendCommand('zero');
+	      });
+	      
+	      $('#btnAvoid').click(function(){
+	      	sendCommand('avoid');
+	      });
+	      
+	      $('#btnZip').click(function(){
+	      	sendCommand('zip');
+	      });
+	      
+	      $('#btnLight').click(function(){
+	      	sendCommand('light');
+	      });
+	      
+	      $('#btnDot').click(function(){
+	      	sendCommand('dotNo');
+	      });
+	      
+	      $('#btnEnter').click(function(){
+	      	sendCommand('enterYes');
+	      });
+	      
+	      $('#btnSystem').click(function(){
+	      	sendCommand('system');
+	      });
+	      
+	      $('#btnDepartment').click(function(){
+	      	sendCommand('department');
+	      });
+	      
+	      $('#btnChannel').click(function(){
+	      	sendCommand('channel');
+	      });
+	      
+	      $('#btnMenu').click(function(){
+	      	sendCommand('menu');
+	      });
+	      
+	      $('#btnFunction').click(function(){
+	      	sendCommand('functionCommand');
+	      });
+	      
+	      $('#btnLeft').click(function(){
+	      	sendCommand('left');
+	      });
+	      
+	      $('#btnRight').click(function(){
+	      	sendCommand('right');
+	      });
+	      
+	      $('#btnTop').click(function(){
+	      	sendCommand('top');
+	      });
+	      
+	      
+	      $('#btnCloseCall').click(function(){
+	      	if(!closeCallMode){
+	      		doCloseCallMode();
+	      	}else{
+	      		doScanMode();
+	      	}
+	      	
+	      });
+	      
+	      $('#btnScan').click(function(){
+	      	doScanMode();
+	      });
+	      
+	      $('#btnMute').click(function(){
+	      	isMuting = true;
+	      	if(!mutedState){
+	      		$( this ).removeClass("btn-primary");
+	          	$( this ).addClass("btn-danger");
+	          	$( this ).html("Unmute");
+	      	}else{
+	      		$( this ).removeClass("btn-danger");
+	          	$( this ).addClass("btn-primary");
+	          	$( this ).html("Mute");
+	      	}
+	      	sendCommand("VOL\r");
+	      });
+	      
+	      $('#volume').change(function(){
+	      	var level = $('#volume').val();
+	      	if(level != "" && level < 16){
+	      		if(mutedState){
+	      			//unmute
+	      			$( '#btnMute' ).removeClass("btn-danger");
+	              	$( '#btnMute' ).addClass("btn-primary");
+	              	$( '#btnMute' ).html("Mute");
+	              	mutedState = false;
+	      		}
+	          	var command = "VOL," + level + "\r";
+	          	sendCommand(command);
+	      	}
+	      });
+	      
+	  	
+	  	 
+	  });
+
+</script>
+
+</body>
+</html>
