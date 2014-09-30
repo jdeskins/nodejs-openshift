@@ -76,6 +76,12 @@ io.on('connection', function(socket){
       }
   });
   
+  socket.on('leave', function (room) {
+	  io.to(room).emit('message', 'Scanner disconnecting');
+	  socket.leave(room);
+	  log('S --> Request to leave room', room);
+});
+  
   function log(){
       var array = [">>> "];
       for (var i = 0; i < arguments.length; i++) {
