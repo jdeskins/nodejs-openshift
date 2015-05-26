@@ -3,6 +3,11 @@ var http = require('http').Server(app);
 var io = require('socket.io')(http);
 
 
+app.configure(function() {
+	app.set('port', process.env.OPENSHIFT_NODEJS_PORT || 3000);
+  	app.set('ipaddr', process.env.OPENSHIFT_NODEJS_IP || "127.0.0.1");
+});
+
 app.get('/', function(req, res){
 	res.sendfile(__dirname + '/index.html');
 });
